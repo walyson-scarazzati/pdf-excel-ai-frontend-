@@ -1,0 +1,14 @@
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(255, 204, 128, 0.45), transparent 28%),
+    radial-gradient(circle at right, rgba(107, 142, 35, 0.22), transparent 20%),
+    linear-gradient(135deg, #f6f1e8, #f2f8ef 50%, #eaf3f9 100%);
+  color: #1f2933;
+}

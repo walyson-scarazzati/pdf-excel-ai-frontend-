@@ -1,0 +1,85 @@
+name: Release Version
+
+on:
+  pull_request_target:
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Determine bump type
+        id: bump
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          bump=patch
+          if [[ ",${LABELS}," == *",semver:major,"* ]]; then
+            bump=major
+          elif [[ ",${LABELS}," == *",semver:minor,"* ]]; then
+            bump=minor
+          fi
+          echo "value=${bump}" >> "$GITHUB_OUTPUT"
+
+      - name: Calculate next version
+        id: version
+        run: |
+          current_version=$(node -p "require('./package.json').version")
+          current_version=${current_version%%-*}
+          IFS='.' read -r major minor patch <<< "$current_version"
+
+          case "${{ steps.bump.outputs.value }}" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            *)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          next_version="${major}.${minor}.${patch}"
+          echo "current=${current_version}" >> "$GITHUB_OUTPUT"
+          echo "next=${next_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Update package version
+        run: npm version ${{ steps.version.outputs.next }} --no-git-tag-version
+
+      - name: Update Dockerfile version
+        run: |
+          sed -i.bak 's/^ARG APP_VERSION=.*/ARG APP_VERSION=${{ steps.version.outputs.next }}/' Dockerfile
+          rm Dockerfile.bak
+
+      - name: Commit and tag release
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json Dockerfile
+          git commit -m "chore(release): bump version to ${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin main --follow-tags
