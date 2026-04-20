@@ -3,11 +3,12 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export interface ExtractedRow {
-  reference: string;
-  description: string;
-  amount: string;
   date: string;
-  notes: string;
+  description: string;
+  docNumber: string;
+  credit: string;
+  debit: string;
+  balance: string;
 }
 
 export interface ExtractionResult {

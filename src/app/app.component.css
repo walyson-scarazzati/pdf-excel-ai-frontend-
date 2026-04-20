@@ -296,3 +296,57 @@ thead {
     flex-direction: column;
   }
 }
+
+/* ── Accounting data section ── */
+.data-section {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.totals-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.total-item {
+  flex: 1;
+  min-width: 160px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(31,41,51,0.06);
+}
+
+.total-item span {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.total-item strong {
+  font-size: 1.15rem;
+  display: block;
+}
+
+.total-debit strong { color: #a31d1d; }
+.total-credit strong { color: #1f7a5c; }
+
+.row-debit td { background: rgba(163,29,29,0.04); }
+.row-credit td { background: rgba(31,122,92,0.04); }
+
+.type-debit  { color: #a31d1d; font-weight: 700; }
+.type-credit { color: #1f7a5c; font-weight: 700; }
+
+.col-amount-debit  { text-align: right; color: #a31d1d; font-variant-numeric: tabular-nums; }
+.col-amount-credit { text-align: right; color: #1f7a5c; font-variant-numeric: tabular-nums; }
+
+.col-date { white-space: nowrap; }
+.col-ref  { white-space: nowrap; color: var(--muted); font-size: 0.88rem; }
+.col-who  { color: var(--muted); }
+.col-type { white-space: nowrap; }

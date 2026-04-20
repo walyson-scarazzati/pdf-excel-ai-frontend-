@@ -30,112 +30,50 @@ import { DocumentService, ExtractionResult } from './document.service';
         <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
       </section>
 
-      <section class="results-grid" *ngIf="result() as currentResult">
-        <article class="panel summary-panel wide">
-          <div>
-            <p class="panel-kicker">Resumo da extracao</p>
-            <h2>Comparacao entre original e resultado</h2>
+      <section class="data-section" *ngIf="result() as currentResult">
+        <div class="totals-bar">
+          <div class="total-item">
+            <span>Lançamentos</span>
+            <strong>{{ currentResult.totalRows }}</strong>
           </div>
-
-          <div class="summary-metrics">
-            <div class="metric-card">
-              <span>Ficheiro</span>
-              <strong>{{ currentResult.fileName }}</strong>
-            </div>
-            <div class="metric-card">
-              <span>Paginas</span>
-              <strong>{{ currentResult.pageCount }}</strong>
-            </div>
-            <div class="metric-card">
-              <span>Linhas extraidas</span>
-              <strong>{{ currentResult.totalRows }}</strong>
-            </div>
-            <div class="metric-card">
-              <span>Modo</span>
-              <strong>{{ currentResult.extractionMode }}</strong>
-            </div>
-            <div class="metric-card">
-              <span>IA ativa</span>
-              <strong>{{ currentResult.aiUsed ? 'Sim' : 'Nao' }}</strong>
-            </div>
-            <div class="metric-card">
-              <span>OCR usado</span>
-              <strong>{{ currentResult.ocrUsed ? 'Sim' : 'Nao' }}</strong>
-            </div>
-            <div class="metric-card">
-              <span>Paginas renderizadas</span>
-              <strong>{{ currentResult.pageImages.length }}</strong>
-            </div>
+          <div class="total-item total-credit">
+            <span>Total Créditos</span>
+            <strong>R$ {{ totalByField('credit') }}</strong>
           </div>
-        </article>
-
-        <article class="panel original-panel">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Original</p>
-              <h2>Original renderizado</h2>
-            </div>
-            <p class="panel-note">As primeiras paginas ou a imagem enviada sao renderizadas para facilitar a comparacao visual.</p>
+          <div class="total-item total-debit">
+            <span>Total Débitos</span>
+            <strong>R$ {{ totalByField('debit') }}</strong>
           </div>
+        </div>
 
-          <div class="page-gallery" *ngIf="currentResult.pageImages.length; else noPreviewPages">
-            <figure class="page-frame" *ngFor="let pageImage of currentResult.pageImages; index as pageIndex">
-              <figcaption>Pagina {{ pageIndex + 1 }}</figcaption>
-              <img [src]="pageImage" [alt]="'Pagina ' + (pageIndex + 1) + ' do documento original'" />
-            </figure>
-          </div>
-
-          <ng-template #noPreviewPages>
-            <p class="empty-state">Nao foi possivel gerar a vista previa visual do documento.</p>
-          </ng-template>
-        </article>
-
-        <article class="panel text-panel">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Leitura bruta</p>
-              <h2>Texto lido do PDF</h2>
-            </div>
-            <p class="panel-note">Este bloco ajuda a identificar quebras, perdas de contexto, falhas de OCR e ruido na extração.</p>
-          </div>
-
-          <pre>{{ currentResult.previewText }}</pre>
-        </article>
-
-        <article class="panel wide data-panel">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Resultado estruturado</p>
-              <h2>Linhas preparadas para Excel</h2>
-            </div>
-            <p class="panel-note">Se a leitura visual e a tabela divergirem, o problema esta na extração, no OCR ou no mapeamento para Excel.</p>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Referencia</th>
-                  <th>Descricao</th>
-                  <th>Valor</th>
-                  <th>Data</th>
-                  <th>Notas</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let row of currentResult.rows; index as rowIndex">
-                  <td class="row-index">{{ rowIndex + 1 }}</td>
-                  <td>{{ row.reference }}</td>
-                  <td>{{ row.description }}</td>
-                  <td>{{ row.amount }}</td>
-                  <td>{{ row.date }}</td>
-                  <td>{{ row.notes }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Nº Doc</th>
+                <th>Crédito (R$)</th>
+                <th>Débito (R$)</th>
+                <th>Saldo (R$)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of currentResult.rows; index as rowIndex"
+                  [class.row-debit]="row.debit"
+                  [class.row-credit]="row.credit && !row.debit">
+                <td class="row-index">{{ rowIndex + 1 }}</td>
+                <td class="col-date">{{ row.date }}</td>
+                <td>{{ row.description }}</td>
+                <td class="col-ref">{{ row.docNumber }}</td>
+                <td class="col-amount-credit">{{ row.credit }}</td>
+                <td class="col-amount-debit">{{ row.debit }}</td>
+                <td class="col-balance">{{ row.balance }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   `,
@@ -148,6 +86,18 @@ export class AppComponent {
   protected readonly result = signal<ExtractionResult | null>(null);
 
   constructor(private readonly documentService: DocumentService) {}
+
+  protected totalByField(field: 'credit' | 'debit'): string {
+    const rows = this.result()?.rows ?? [];
+    const total = rows
+      .map((row) => this.parseAmount(row[field]))
+      .reduce((sum, amount) => sum + amount, 0);
+
+    return total.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
 
   protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -200,5 +150,27 @@ export class AppComponent {
         this.loading.set(false);
       }
     });
+  }
+
+  private parseAmount(amount: string): number {
+    const normalizedAmount = amount.replace(/[^\d,.-]/g, '');
+    if (!normalizedAmount) {
+      return 0;
+    }
+
+    const lastComma = normalizedAmount.lastIndexOf(',');
+    const lastDot = normalizedAmount.lastIndexOf('.');
+    let canonicalAmount = normalizedAmount;
+
+    if (lastComma > lastDot) {
+      canonicalAmount = normalizedAmount.replace(/\./g, '').replace(',', '.');
+    } else if (lastDot > lastComma && (normalizedAmount.match(/\./g)?.length ?? 0) > 1) {
+      canonicalAmount = normalizedAmount.replace(/\./g, '');
+    } else {
+      canonicalAmount = normalizedAmount.replace(/,/g, '');
+    }
+
+    const parsed = Number(canonicalAmount);
+    return Number.isFinite(parsed) ? Math.abs(parsed) : 0;
   }
 }
